@@ -71,8 +71,11 @@ namespace StreamReadWithCompressing
                 var copyCount = Math.Min(_BufferDecompressedDataLength - _BufferDecompressedDataPosition, count);
                 Array.Copy(_BufferDecompressedData, _BufferDecompressedDataPosition, buffer, 0, copyCount);
                 _BufferDecompressedDataPosition += copyCount;
+                _Position += copyCount;
                 return copyCount;
             }
+
+            if (count == 0) return 0;
 
             //Read new compressed chunk
             //Read first 4 bytes - may be known headerIdentification - it means that stream is compressed
@@ -85,7 +88,9 @@ namespace StreamReadWithCompressing
                 //not compressed by known headerIdentification - only copy to output
                 LastReadUsedHeaderIdentification = null;
                 Array.Copy(intBytes, buffer, intBytes.Length);
-                return _StreamDataForReading.Read(buffer, intBytes.Length, count - intBytes.Length) + intBytes.Length;
+                int readedOriginal = _StreamDataForReading.Read(buffer, intBytes.Length, count - intBytes.Length) + intBytes.Length;
+                _Position += readedOriginal;
+                return readedOriginal;
             }
             LastReadUsedHeaderIdentification = Encoding.UTF8.GetString(intBytes);
 
