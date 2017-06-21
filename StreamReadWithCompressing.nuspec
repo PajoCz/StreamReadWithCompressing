@@ -15,6 +15,6 @@
 
   <files>
     <file src="StreamReadWithCompressing\StreamReadWithCompressing\bin\Debug\StreamReadWithCompressing.dll" target="lib\net40"/>
-    <file src="StreamReadWithCompressing\StreamReadWithCompressing\bin\Debug\StreamReadWithCompressing.dll" target="lib\net40"/>
+    <file src="StreamReadWithCompressing\StreamReadWithCompressing\bin\Debug\StreamReadWithCompressing.pdb" target="lib\net40"/>
   </files>
 </package>
