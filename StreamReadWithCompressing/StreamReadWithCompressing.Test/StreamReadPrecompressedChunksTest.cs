@@ -11,20 +11,20 @@ namespace StreamReadWithCompressing.Test
     [TestFixture]
     public class StreamReadPrecompressedChunksTest
     {
-        //[Test]
-        //public void CreateTestFile()
-        //{
-        //    string text = "This is testing content for compressing.";
-        //    using (var streamWithData = new FileStream(@"C:\1\original.txt", FileMode.Create))
-        //    {
-        //        //Create 1MB MemoryStream
-        //        while (streamWithData.Position <= 1024 * 1024 * 1024)
-        //        {
-        //            streamWithData.Write(Encoding.UTF8.GetBytes(text), 0, text.Length);
-        //        }
-        //        streamWithData.Position = 0;
-        //    }
-        //}
+        [Test]
+        public void CreateTestFile()
+        {
+            string text = "This is testing content for compressing.";
+            using (var streamWithData = new FileStream(@"C:\1\original.txt", FileMode.Create))
+            {
+                //Create 1MB MemoryStream
+                while (streamWithData.Position <= 1024 * 1024 * 1024)
+                {
+                    streamWithData.Write(Encoding.UTF8.GetBytes(text), 0, text.Length);
+                }
+                streamWithData.Position = 0;
+            }
+        }
 
         [TestCase(1)]
         [TestCase(2)]
