@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>StreamReadWithCompressing</id>
-    <version>1.2.0</version>
+    <version>1.3.0</version>
     <authors>pbalas</authors>
     <owners>pbalas</owners>
     <licenseUrl>https://github.com/PajoCz/RuleEvaluator/licence.txt</licenseUrl>
@@ -15,6 +15,6 @@
 
   <files>
     <file src="StreamReadWithCompressing\StreamReadWithCompressing\bin\Debug\StreamReadWithCompressing.dll" target="lib\net40"/>
-    <file src="StreamReadWithCompressing\StreamReadWithCompressing\bin\Debug\StreamReadWithCompressing.dll" target="lib\net40"/>
+    <file src="StreamReadWithCompressing\StreamReadWithCompressing\bin\Debug\StreamReadWithCompressing.pdb" target="lib\net40"/>
   </files>
 </package>
