@@ -40,7 +40,8 @@ namespace StreamReadWithCompressing.Test
             var logText = $"{DateTime.Now} Compress {oldNewString} algo ({p_PrepareChunks} chunks) elapsed {sw.Elapsed}{Environment.NewLine}";
             Log(logText);
 
-            Assert.AreEqual(4246802, new FileInfo(FileNameCompressed).Length);
+            //Assert.AreEqual(4246802, new FileInfo(FileNameCompressed).Length);    //gzip
+            //Assert.AreEqual(852011, new FileInfo(FileNameCompressed).Length); //brotli
             DecompressFile(FileNameCompressed, FileNameDecompressed);
             AssertFileContentsSame(FileNameOriginal, FileNameDecompressed);
         }
@@ -48,8 +49,8 @@ namespace StreamReadWithCompressing.Test
         private Stream StreamReadCreator(bool p_OldAlgo, Stream p_StreamDataForReading, int p_PrepareChunks = 0)
         {
             return p_OldAlgo 
-                ? (Stream)new StreamReadCompress(p_StreamDataForReading, StreamReadModules.HeaderIdentificationGzip) 
-                : new StreamReadPrecompressedChunks(p_StreamDataForReading, StreamReadModules.HeaderIdentificationGzip, p_PreparedChunks: p_PrepareChunks);
+                ? (Stream)new StreamReadCompress(p_StreamDataForReading, StreamReadModules.HeaderIdentificationBrotli) 
+                : new StreamReadPrecompressedChunks(p_StreamDataForReading, StreamReadModules.HeaderIdentificationBrotli, p_PreparedChunks: p_PrepareChunks);
         }
 
         private void CreateTestFileIfNotExists()

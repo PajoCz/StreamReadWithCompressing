@@ -135,8 +135,9 @@ namespace StreamReadWithCompressing
                 throw new ArgumentException("Offset and length were out of bounds for the array");
 
             int readedBytesFromOriginalStream;
+            bool chunkReadedToEnd;
             var result = ActiveChunk.BlockingReadFromCompressedChunk(buffer, count,
-                _CompressModule.HeaderIdentificationBytes, out readedBytesFromOriginalStream);
+                _CompressModule.HeaderIdentificationBytes, out readedBytesFromOriginalStream, out chunkReadedToEnd);
             _Position += readedBytesFromOriginalStream;
 #if log
             Log(
@@ -150,9 +151,12 @@ namespace StreamReadWithCompressing
                 return result;
             }
 
-            ActiveChunk.ReadDataAndStartCompressingInTask(_StreamDataForReading, _CompressModule,
-                _ReadedChunkSizeBeforeCompress, _CompressOnlyStreamWithMinimumLength, _CompressOnlyRatioToPercent);
-            SwitchToNextChunk();
+            if (chunkReadedToEnd)
+            {
+                ActiveChunk.ReadDataAndStartCompressingInTask(_StreamDataForReading, _CompressModule,
+                    _ReadedChunkSizeBeforeCompress, _CompressOnlyStreamWithMinimumLength, _CompressOnlyRatioToPercent);
+                SwitchToNextChunk();
+            }
             return result;
         }
 

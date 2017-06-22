@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using Brotli;
 
 namespace StreamReadWithCompressing
 {
@@ -14,6 +15,8 @@ namespace StreamReadWithCompressing
         public const string HeaderIdentificationGzip = "gzip";
 
         public const string HeaderIdentificationDeflate = "defl";
+
+        public const string HeaderIdentificationBrotli = "br  ";
 
         private readonly Dictionary<int, StreamReadModule> _Modules;
 
@@ -34,7 +37,14 @@ namespace StreamReadWithCompressing
                     HeaderIdentificationBytes = Encoding.UTF8.GetBytes(HeaderIdentificationDeflate),
                     ActionCreateCompressStreamForWriting = inputStream => new DeflateStream(inputStream, CompressionMode.Compress, true),
                     ActionCreateDecompressStreamForWriting = inputStream => new DeflateStream(inputStream, CompressionMode.Decompress, true)
-                }
+                },
+                new StreamReadModule
+                {
+                HeaderIdentification = HeaderIdentificationBrotli,
+                HeaderIdentificationBytes = Encoding.UTF8.GetBytes(HeaderIdentificationBrotli),
+                ActionCreateCompressStreamForWriting = inputStream => new BrotliStream(inputStream, CompressionMode.Compress, true),
+                ActionCreateDecompressStreamForWriting = inputStream => new BrotliStream(inputStream, CompressionMode.Decompress, true)
+            }
             }.ToDictionary(m => BitConverter.ToInt32(Encoding.UTF8.GetBytes(m.HeaderIdentification), 0));
         }
 

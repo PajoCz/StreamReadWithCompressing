@@ -37,7 +37,7 @@ namespace StreamReadWithCompressing
 #endif
 
         public int BlockingReadFromCompressedChunk(byte[] p_Buffer, int p_Count,
-            byte[] p_CompressModuleHeaderIdentificationBytes, out int p_ReadedBytesFromOriginalStream)
+            byte[] p_CompressModuleHeaderIdentificationBytes, out int p_ReadedBytesFromOriginalStream, out bool p_ChunkReadedToEnd)
         {
 #if log
             Log("ManualResetEvent.WaitOne before");
@@ -49,6 +49,7 @@ namespace StreamReadWithCompressing
             Log("ManualResetEvent.WaitOne after");
 #endif
             p_ReadedBytesFromOriginalStream = 0;
+            p_ChunkReadedToEnd = true;
             var result = 0;
 
 #if log
@@ -57,7 +58,7 @@ namespace StreamReadWithCompressing
 #endif
             if (StreamReadCompressSource == StreamReadCompressSourceEnum.BufferOriginalData)
             {
-                result = ProcessBufferOriginalData(p_Buffer, p_Count, out p_ReadedBytesFromOriginalStream);
+                result = ProcessBufferOriginalData(p_Buffer, p_Count, out p_ReadedBytesFromOriginalStream, out p_ChunkReadedToEnd);
 #if log
                 Log($"Read reads from original data {result} B");
 #endif
@@ -66,7 +67,7 @@ namespace StreamReadWithCompressing
             if (StreamReadCompressSource == StreamReadCompressSourceEnum.StreamCompressedData)
             {
                 result = ProcessStreamCompressedData(p_Buffer, p_Count, p_CompressModuleHeaderIdentificationBytes,
-                    out p_ReadedBytesFromOriginalStream);
+                    out p_ReadedBytesFromOriginalStream, out p_ChunkReadedToEnd);
 #if log
                 Log($"Read reads from compressed data {result} B");
 #endif
@@ -75,7 +76,7 @@ namespace StreamReadWithCompressing
         }
 
         private int ProcessStreamCompressedData(byte[] buffer, int count,
-            byte[] p_CompressModuleHeaderIdentificationBytes, out int p_ReadedBytesFromOriginalStream)
+            byte[] p_CompressModuleHeaderIdentificationBytes, out int p_ReadedBytesFromOriginalStream, out bool p_ChunkReadedToEnd)
         {
             if (_StreamCompressedData.Position == 0)
             {
@@ -92,6 +93,7 @@ namespace StreamReadWithCompressing
 #if log
                 Log($"ReadedCompressed 12B Header + {readedCompressed} B = {p_ReadedBytesFromOriginalStream} B");
 #endif
+                p_ChunkReadedToEnd = _StreamCompressedData.Position == _StreamCompressedDataLength;
                 return 12 + readedCompressed;
             }
             var readedCompressed2 = _StreamCompressedData.Read(buffer, 0,
@@ -101,10 +103,11 @@ namespace StreamReadWithCompressing
             Log($"ReadedCompressed {p_ReadedBytesFromOriginalStream} B");
 #endif
 
+            p_ChunkReadedToEnd = _StreamCompressedData.Position == _StreamCompressedDataLength;
             return readedCompressed2;
         }
 
-        private int ProcessBufferOriginalData(byte[] buffer, int count, out int p_ReadedBytesFromOriginalStream)
+        private int ProcessBufferOriginalData(byte[] buffer, int count, out int p_ReadedBytesFromOriginalStream, out bool p_ChunkReadedToEnd)
         {
             var copyCount = Math.Min(count, _BufferOriginalDataLength - _BufferOriginalDataPosition);
             Buffer.BlockCopy(_BufferOriginalData, _BufferOriginalDataPosition, buffer, 0, copyCount);
@@ -114,7 +117,7 @@ namespace StreamReadWithCompressing
 #if log
             Log($"ReadedOriginal {p_ReadedBytesFromOriginalStream} B");
 #endif
-
+            p_ChunkReadedToEnd = _BufferOriginalDataPosition == _BufferOriginalDataLength;
             return copyCount;
         }
 

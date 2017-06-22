@@ -110,6 +110,7 @@ namespace StreamReadWithCompressing.Test
 
         [TestCase(StreamReadModules.HeaderIdentificationDeflate)]
         [TestCase(StreamReadModules.HeaderIdentificationGzip)]
+        [TestCase(StreamReadModules.HeaderIdentificationBrotli)]
         public void Compress_Decompress_1MB_TextData_ReturnCompressedData_DecompressMustReturnOriginalData(string p_HeaderIdentification)
         {
             string text = "This is testing content for compressing";
@@ -125,7 +126,7 @@ namespace StreamReadWithCompressing.Test
 
                 //Compress
                 using (var streamReadCompress = new StreamReadCompress(streamWithData, p_HeaderIdentification))
-                //using (var streamWithCompressedData = new FileStream(@"D:\1compress.gzip", FileMode.Create))
+                //using (var streamWithCompressedData = new FileStream(@"compressed.dat", FileMode.Create))
                 using (var streamWithCompressedData = new MemoryStream())
                 {
                     streamReadCompress.CopyTo(streamWithCompressedData);
@@ -179,45 +180,51 @@ namespace StreamReadWithCompressing.Test
         {
             string text = "This is testing content for compressing";
 
-            List<string> headerIdentification = new List<string> {StreamReadModules.HeaderIdentificationGzip, StreamReadModules.HeaderIdentificationDeflate};
+            List<string> headerIdentification = new List<string> {StreamReadModules.HeaderIdentificationGzip, StreamReadModules.HeaderIdentificationDeflate, StreamReadModules.HeaderIdentificationBrotli};
             headerIdentification.ForEach(hi =>
             {
-                using (var streamWithData = new MemoryStream())
+                for (int preparedChunksSettings = 0; preparedChunksSettings < 8; preparedChunksSettings++)
                 {
-                    //Create 1MB MemoryStream
-                    while (streamWithData.Position <= 1024 * 1024)
+                    using (var streamWithData = new MemoryStream())
                     {
-                        streamWithData.Write(Encoding.UTF8.GetBytes(text), 0, text.Length);
-                    }
-                    streamWithData.Position = 0;
-
-                    using (var streamReadCompress = new StreamReadCompress(streamWithData, hi,
-                        p_ChunkSizeOfStreamDataForCompress: p_StreamReadCompressChunkSizeForCompress))
-                    using (var streamWithCompressedData = new MemoryStream())
-                    {
-                        StreamCopyToStreamWithBufferSize(streamReadCompress, streamWithCompressedData, p_StreamReadCompressReadBufferSize);
-                        streamReadCompress.CopyTo(streamWithCompressedData);
-
-                        //todo: check that stream contains only one chunk with gzip header
-                        //small header means that compressed is bigger and returns original without compression
-                        string streamWithCompressedDataContent = Encoding.UTF8.GetString(streamWithCompressedData.ToArray());
-                        Assert.AreNotEqual(text, streamWithCompressedDataContent, "Content must be compressed");
-
-                        //Decompress
-                        streamWithCompressedData.Position = 0;
-                        using (StreamReadDecompress streamReadDecompress = new StreamReadDecompress(streamWithCompressedData))
-                            //using (var streamWithUncompressedData = new FileStream(@"D:\1decompress.txt", FileMode.Create))
-                        using (var streamWithUncompressedData = new MemoryStream())
+                        //Create 1MB MemoryStream
+                        while (streamWithData.Position <= 1024 * 1024)
                         {
-                            streamReadDecompress.CopyTo(streamWithUncompressedData, p_StreamReadDecompressReadBufferSize);
+                            streamWithData.Write(Encoding.UTF8.GetBytes(text), 0, text.Length);
+                        }
+                        streamWithData.Position = 0;
 
-                            //Assert streamWithData = streamWithUncompressedData
-                            streamWithData.Position = 0;
-                            streamWithUncompressedData.Position = 0;
-                            Assert.AreEqual(streamWithData.Length, streamWithUncompressedData.Length, "Decompressed stream must be same length as original data");
-                            for (int i = 0; i < streamWithData.Position; i++)
+                        Stream streamCompress = preparedChunksSettings == 0
+                            ? (Stream) new StreamReadCompress(streamWithData, hi, p_ChunkSizeOfStreamDataForCompress: p_StreamReadCompressChunkSizeForCompress)
+                            : new StreamReadPrecompressedChunks(streamWithData, hi, p_ChunkSizeOfStreamDataForCompress: p_StreamReadCompressChunkSizeForCompress,
+                                p_PreparedChunks: preparedChunksSettings);
+                        using (var streamReadCompress = streamCompress)
+                        using (var streamWithCompressedData = new MemoryStream())
+                        {
+                            StreamCopyToStreamWithBufferSize(streamReadCompress, streamWithCompressedData, p_StreamReadCompressReadBufferSize);
+                            streamReadCompress.CopyTo(streamWithCompressedData);
+
+                            //todo: check that stream contains only one chunk with gzip header
+                            //small header means that compressed is bigger and returns original without compression
+                            string streamWithCompressedDataContent = Encoding.UTF8.GetString(streamWithCompressedData.ToArray());
+                            Assert.AreNotEqual(text, streamWithCompressedDataContent, "Content must be compressed");
+
+                            //Decompress
+                            streamWithCompressedData.Position = 0;
+                            using (StreamReadDecompress streamReadDecompress = new StreamReadDecompress(streamWithCompressedData))
+                                //using (var streamWithUncompressedData = new FileStream(@"D:\1decompress.txt", FileMode.Create))
+                            using (var streamWithUncompressedData = new MemoryStream())
                             {
-                                Assert.AreEqual(streamWithData.ReadByte(), streamWithUncompressedData.ReadByte(), "Content of decompressed stream is different");
+                                streamReadDecompress.CopyTo(streamWithUncompressedData, p_StreamReadDecompressReadBufferSize);
+
+                                //Assert streamWithData = streamWithUncompressedData
+                                streamWithData.Position = 0;
+                                streamWithUncompressedData.Position = 0;
+                                Assert.AreEqual(streamWithData.Length, streamWithUncompressedData.Length, "Decompressed stream must be same length as original data");
+                                for (int i = 0; i < streamWithData.Position; i++)
+                                {
+                                    Assert.AreEqual(streamWithData.ReadByte(), streamWithUncompressedData.ReadByte(), "Content of decompressed stream is different");
+                                }
                             }
                         }
                     }
