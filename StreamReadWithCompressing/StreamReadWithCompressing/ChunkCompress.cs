@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace StreamReadWithCompressing
 {
-    public class Chunk
+    public class ChunkCompress
     {
         public readonly byte[] _BufferOriginalData;
 
@@ -21,7 +21,7 @@ namespace StreamReadWithCompressing
         private StreamReadCompressSourceEnum StreamReadCompressSource;
         public Stopwatch TotalBlockedTime = new Stopwatch();
 
-        public Chunk(int p_Key, byte[] p_BufferOriginalData, Stream p_StreamCompressedData, Action<string> p_LogAction)
+        public ChunkCompress(int p_Key, byte[] p_BufferOriginalData, Stream p_StreamCompressedData, Action<string> p_LogAction)
         {
             _Key = p_Key;
             _BufferOriginalData = p_BufferOriginalData;

@@ -14,43 +14,60 @@ namespace StreamReadWithCompressing.Test
         private const string FileNameCompressed = "compressed.gzip";
         private const string FileNameDecompressed = "decompressed.txt";
 
-        [TestCase(true, 0)]
-        [TestCase(false, 1)]
-        [TestCase(false, 2)]
-        [TestCase(false, 3)]
-        [TestCase(false, 4)]
-        [TestCase(false, 5)]
-        [TestCase(false, 6)]
-        [TestCase(false, 7)]
-        [TestCase(false, 8)]
-        public void CompressFile_LogInfoAboutCompressTime_AssertWithDecompressAlgo(bool p_OldAlgo, int p_PrepareChunks)
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        [TestCase(3)]
+        [TestCase(4)]
+        [TestCase(5)]
+        [TestCase(6)]
+        [TestCase(7)]
+        [TestCase(8)]
+        public void CompressDecompressFile_LogInfoAboutCompressDecompressTime_CheckOriginalContentWithDecompressed(int p_PrepareChunks)
         {
             CreateTestFileIfNotExists();
 
             var sw = Stopwatch.StartNew();
+
             using (var streamWithData = new FileStream(FileNameOriginal, FileMode.Open))
-            using (var compressStream = StreamReadCreator(p_OldAlgo, streamWithData, p_PrepareChunks))
-            using (var streamCompressed = new FileStream(FileNameCompressed, FileMode.Create))
             {
-                compressStream.CopyTo(streamCompressed);
+                Stream compressStreamCreated = p_PrepareChunks == 0
+                    ? (Stream)new StreamReadCompress(streamWithData, StreamReadModules.HeaderIdentificationBrotli)
+                    : new StreamReadPrecompressedChunks(streamWithData, StreamReadModules.HeaderIdentificationBrotli, p_PreparedChunks: p_PrepareChunks);
+                using (var compressStream = compressStreamCreated)
+                using (var streamCompressed = new FileStream(FileNameCompressed, FileMode.Create))
+                {
+                    compressStream.CopyTo(streamCompressed);
+                }
             }
             sw.Stop();
 
-            string oldNewString = p_OldAlgo ? "old" : "new";
+            string oldNewString = p_PrepareChunks == 0 ? "old" : "new";
             var logText = $"{DateTime.Now} Compress {oldNewString} algo ({p_PrepareChunks} chunks) elapsed {sw.Elapsed}{Environment.NewLine}";
             Log(logText);
 
             //Assert.AreEqual(4246802, new FileInfo(FileNameCompressed).Length);    //gzip
-            //Assert.AreEqual(852011, new FileInfo(FileNameCompressed).Length); //brotli
-            DecompressFile(FileNameCompressed, FileNameDecompressed);
-            AssertFileContentsSame(FileNameOriginal, FileNameDecompressed);
-        }
+            Assert.AreEqual(852011, new FileInfo(FileNameCompressed).Length); //brotli
 
-        private Stream StreamReadCreator(bool p_OldAlgo, Stream p_StreamDataForReading, int p_PrepareChunks = 0)
-        {
-            return p_OldAlgo 
-                ? (Stream)new StreamReadCompress(p_StreamDataForReading, StreamReadModules.HeaderIdentificationBrotli) 
-                : new StreamReadPrecompressedChunks(p_StreamDataForReading, StreamReadModules.HeaderIdentificationBrotli, p_PreparedChunks: p_PrepareChunks);
+            sw = Stopwatch.StartNew();
+            using (var streamWithData = new FileStream(FileNameCompressed, FileMode.Open))
+            {
+                Stream decompressStreamCreated = p_PrepareChunks == 0
+                    ? (Stream)new StreamReadDecompress(streamWithData)
+                    : new StreamReadPredecompressedChunks(streamWithData, p_PrepareChunks);
+                using (var compressStream = decompressStreamCreated)
+                using (var streamCompressed = new FileStream(FileNameDecompressed, FileMode.Create))
+                {
+                    compressStream.CopyTo(streamCompressed);
+                }
+            }
+            sw.Stop();
+
+            oldNewString = p_PrepareChunks == 0 ? "old" : "new";
+            logText = $"{DateTime.Now} Decompress {oldNewString} algo ({p_PrepareChunks} chunks) elapsed {sw.Elapsed}{Environment.NewLine}";
+            Log(logText);
+
+            AssertFileContentsSame(FileNameOriginal, FileNameDecompressed);
         }
 
         private void CreateTestFileIfNotExists()
@@ -64,21 +81,6 @@ namespace StreamReadWithCompressing.Test
                         streamWithData.Write(Encoding.UTF8.GetBytes(text), 0, text.Length);
                 }
             }
-        }
-
-        private void DecompressFile(string p_FileNameSource, string p_FileNameDestination)
-        {
-            var sw = Stopwatch.StartNew();
-            using (var streamWithData = new FileStream(p_FileNameSource, FileMode.Open))
-            using (var compressStream = new StreamReadDecompress(streamWithData))
-            using (var streamCompressed = new FileStream(p_FileNameDestination, FileMode.Create))
-            {
-                compressStream.CopyTo(streamCompressed);
-            }
-            sw.Stop();
-
-            var logText = $"{DateTime.Now} Decompress elapsed {sw.Elapsed}{Environment.NewLine}";
-            Log(logText);
         }
 
         private void AssertFileContentsSame(string p_FileName1, string p_FileName2)

@@ -211,7 +211,10 @@ namespace StreamReadWithCompressing.Test
 
                             //Decompress
                             streamWithCompressedData.Position = 0;
-                            using (StreamReadDecompress streamReadDecompress = new StreamReadDecompress(streamWithCompressedData))
+                            Stream streamDecompress = preparedChunksSettings == 0
+                                ? (Stream)new StreamReadDecompress(streamWithCompressedData)
+                                : new StreamReadPredecompressedChunks(streamWithCompressedData, preparedChunksSettings);
+                            using (var streamReadDecompress = streamDecompress)
                                 //using (var streamWithUncompressedData = new FileStream(@"D:\1decompress.txt", FileMode.Create))
                             using (var streamWithUncompressedData = new MemoryStream())
                             {

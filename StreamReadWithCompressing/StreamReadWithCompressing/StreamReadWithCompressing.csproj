@@ -44,8 +44,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Chunk.cs" />
+    <Compile Include="ChunkCompress.cs" />
+    <Compile Include="ChunkDecompress.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="StreamReadPredecompressedChunks.cs" />
     <Compile Include="StreamReadPrecompressedChunks.cs" />
     <Compile Include="StreamReadCompress.cs" />
     <Compile Include="StreamReadDecompress.cs" />

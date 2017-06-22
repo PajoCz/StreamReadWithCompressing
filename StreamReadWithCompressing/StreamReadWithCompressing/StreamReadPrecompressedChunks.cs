@@ -26,7 +26,7 @@ namespace StreamReadWithCompressing
         private readonly byte _CompressOnlyRatioToPercent;
         private readonly int _CompressOnlyStreamWithMinimumLength;
 
-        private readonly List<Chunk> _Chunks;
+        private readonly List<ChunkCompress> _Chunks;
         private readonly int _PreparedChunks;
         private readonly int _ReadedChunkSizeBeforeCompress;
 
@@ -65,12 +65,12 @@ namespace StreamReadWithCompressing
                 : p_ChunkSizeOfStreamDataForCompress;
             _StreamDataForReading = p_StreamDataForReading ??
                                     throw new ArgumentNullException(nameof(p_StreamDataForReading));
-            _Chunks = new List<Chunk>(p_PreparedChunks);
+            _Chunks = new List<ChunkCompress>(p_PreparedChunks);
             for (var i = 0; i < p_PreparedChunks; i++)
 #if log
                 _Chunks.Add(new Chunk(i, new byte[_ReadedChunkSizeBeforeCompress], new MemoryStream(), Log));
 #else
-                _Chunks.Add(new Chunk(i, new byte[_ReadedChunkSizeBeforeCompress], new MemoryStream(), null));
+                _Chunks.Add(new ChunkCompress(i, new byte[_ReadedChunkSizeBeforeCompress], new MemoryStream(), null));
 #endif
             var compressModuleIdentifier = Encoding.UTF8.GetBytes(p_CompressModuleIdentifier);
             if (compressModuleIdentifier.Length > 0)
@@ -104,7 +104,7 @@ namespace StreamReadWithCompressing
             }
         }
 
-        private Chunk ActiveChunk => _Chunks[_ChunkBufferIndexForRead];
+        private ChunkCompress ActiveChunk => _Chunks[_ChunkBufferIndexForRead];
 
         public override void Flush()
         {
