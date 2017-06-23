@@ -106,7 +106,8 @@ namespace StreamReadWithCompressing
             //Read Chunk data to _BufferCompressedData
             if (_BufferCompressedData.Length < compressedChunkSize)
                 Array.Resize(ref _BufferCompressedData, compressedChunkSize);
-            var readed = _StreamDataForReading.Read(_BufferCompressedData, 0, compressedChunkSize);
+
+            int readed = _StreamDataForReading.ReadMaybeMoreTimes(_BufferCompressedData, 0, compressedChunkSize);
             if (readed == 0) return 0;
 
             _StreamCompressedData.Position = 0;

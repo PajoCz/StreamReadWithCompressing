@@ -66,7 +66,8 @@ namespace StreamReadWithCompressing
                     Array.Resize(ref _BufferDecompressedData, p_Count);
                 }
                 Array.Copy(intBytes, _BufferDecompressedData, intBytes.Length);
-                int readedOriginal = p_StreamDataForReading.Read(_BufferDecompressedData, intBytes.Length, p_Count - intBytes.Length) + intBytes.Length;
+
+                int readedOriginal = p_StreamDataForReading.ReadMaybeMoreTimes(_BufferDecompressedData, intBytes.Length, p_Count);
                 _BufferDecompressedDataLength = readedOriginal;
                 _BufferDecompressedDataPosition = 0;
                 return;
@@ -92,7 +93,8 @@ namespace StreamReadWithCompressing
             //Read Chunk data to _BufferCompressedData
             if (_BufferCompressedData.Length < compressedChunkSize)
                 Array.Resize(ref _BufferCompressedData, compressedChunkSize);
-            var readed = p_StreamDataForReading.Read(_BufferCompressedData, 0, compressedChunkSize);
+
+            int readed = p_StreamDataForReading.ReadMaybeMoreTimes(_BufferCompressedData, 0, compressedChunkSize);
             if (readed == 0)
             {
                 _BufferDecompressedDataLength = 0;
