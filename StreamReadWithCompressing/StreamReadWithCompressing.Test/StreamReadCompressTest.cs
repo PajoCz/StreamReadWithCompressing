@@ -11,6 +11,7 @@ namespace StreamReadWithCompressing.Test
     {
         [TestCase(StreamReadModules.HeaderIdentificationDeflate)]
         [TestCase(StreamReadModules.HeaderIdentificationGzip)]
+        [TestCase(StreamReadModules.HeaderIdentificationBrotli)]
         public void CompressOnlyStreamWithMinimumLength_LargerValueThanInputStream_ReturnsOriginalDataWithoutCompression(string p_HeaderIdentification)
         {
             string text = "This is testing content for compressing";
@@ -28,6 +29,7 @@ namespace StreamReadWithCompressing.Test
 
         [TestCase(StreamReadModules.HeaderIdentificationDeflate)]
         [TestCase(StreamReadModules.HeaderIdentificationGzip)]
+        [TestCase(StreamReadModules.HeaderIdentificationBrotli)]
         public void CompressOnlyRatioToPercent_SetZeroRation_ReturnsOriginalDataWithoutCompression(string p_HeaderIdentification)
         {
             string text = "This is testing content for compressing";
@@ -44,6 +46,7 @@ namespace StreamReadWithCompressing.Test
 
         [TestCase(StreamReadModules.HeaderIdentificationDeflate)]
         [TestCase(StreamReadModules.HeaderIdentificationGzip)]
+        [TestCase(StreamReadModules.HeaderIdentificationBrotli)]
         public void Compress_Decompress_ShortText(string p_HeaderIdentification)
         {
             string text = "This is testing content for compressing";
@@ -65,6 +68,7 @@ namespace StreamReadWithCompressing.Test
 
         [TestCase(StreamReadModules.HeaderIdentificationDeflate)]
         [TestCase(StreamReadModules.HeaderIdentificationGzip)]
+        [TestCase(StreamReadModules.HeaderIdentificationBrotli)]
         public void Compress_Decompress_1MB_RandomData_CompressedBufferBiggerThanOriginalBufferData_ReturnNotCompressedData_DecompressMustReturnOriginalData(string p_HeaderIdentification)
         {            
             Random random = new Random();
@@ -99,7 +103,7 @@ namespace StreamReadWithCompressing.Test
                         streamWithData.Position = 0;
                         streamWithUncompressedData.Position = 0;
                         Assert.AreEqual(streamWithData.Length, streamWithUncompressedData.Length, "Decompressed stream must be same length as original data");
-                        for (int i = 0; i < streamWithData.Position; i++)
+                        for (int i = 0; i < streamWithData.Length; i++)
                         {
                             Assert.AreEqual(streamWithData.ReadByte(), streamWithUncompressedData.ReadByte(), "Content of decompressed stream is different");
                         }
@@ -145,7 +149,7 @@ namespace StreamReadWithCompressing.Test
                         streamWithData.Position = 0;
                         streamWithUncompressedData.Position = 0;
                         Assert.AreEqual(streamWithData.Length, streamWithUncompressedData.Length, "Decompressed stream must be same length as original data");
-                        for (int i = 0; i < streamWithData.Position; i++)
+                        for (int i = 0; i < streamWithData.Length; i++)
                         {
                             Assert.AreEqual(streamWithData.ReadByte(), streamWithUncompressedData.ReadByte(), "Content of decompressed stream is different");
                         }
@@ -221,10 +225,10 @@ namespace StreamReadWithCompressing.Test
                                 streamReadDecompress.CopyTo(streamWithUncompressedData, p_StreamReadDecompressReadBufferSize);
 
                                 //Assert streamWithData = streamWithUncompressedData
+                                Assert.AreEqual(streamWithData.Length, streamWithUncompressedData.Length, "Decompressed stream must be same length as original data");
                                 streamWithData.Position = 0;
                                 streamWithUncompressedData.Position = 0;
-                                Assert.AreEqual(streamWithData.Length, streamWithUncompressedData.Length, "Decompressed stream must be same length as original data");
-                                for (int i = 0; i < streamWithData.Position; i++)
+                                for (int i = 0; i < streamWithData.Length; i++)
                                 {
                                     Assert.AreEqual(streamWithData.ReadByte(), streamWithUncompressedData.ReadByte(), "Content of decompressed stream is different");
                                 }
@@ -234,6 +238,71 @@ namespace StreamReadWithCompressing.Test
                 }
             });
         }
+
+        [TestCase("A")] //returns only 1 original char
+        [TestCase("AA")] 
+        [TestCase("AAA")] 
+        [TestCase("AAAA")] 
+        [TestCase("AAAAA")] 
+        [TestCase("gzip")]  //start with gzip identifier but without other header int numbers - it's only original uncompressed input
+        [TestCase("gzip.")]
+        [TestCase("gzip..")]
+        [TestCase("gzip...")]
+        [TestCase("gzip....")]  //end first int with Uncompressed size
+        [TestCase("gzip.....")]
+        [TestCase("gzip......")]
+        [TestCase("gzip.......")]
+        [TestCase("gzip........")]  //end second int with Compressed size
+        [TestCase("gzip.........")] //after 2 integers only one char (shorter as compressed size in second integer  )
+        public void NotCompressed_TooShortInput_DecompressThisOriginal(string text)
+        {
+            using (var streamWithData = new MemoryStream())
+            { 
+                streamWithData.Write(Encoding.UTF8.GetBytes(text), 0, text.Length);
+                streamWithData.Position = 0;
+
+                Stream streamCompress = new StreamReadCompress(streamWithData, StreamReadModules.HeaderIdentificationGzip);
+                using (var streamReadCompress = streamCompress)
+                using (var streamWithCompressedData = new MemoryStream())
+                {
+                    StreamCopyToStreamWithBufferSize(streamReadCompress, streamWithCompressedData, text.Length);
+                    streamReadCompress.CopyTo(streamWithCompressedData);
+
+                    //Decompress
+                    streamWithCompressedData.Position = 0;
+
+                    //Test data
+                    Stream streamDecompress = new StreamReadDecompress(streamWithCompressedData);
+                    using (var streamReadDecompress = streamDecompress)
+                    using (var streamWithUncompressedData = new MemoryStream())
+                    {
+                        streamReadDecompress.CopyTo(streamWithUncompressedData);
+
+                        Assert.AreEqual(text.Length, streamWithData.Position);
+                        Assert.AreEqual(text.Length, streamWithCompressedData.Position);
+                        Assert.AreEqual(text.Length, streamWithUncompressedData.Position);
+                        //Assert streamWithData = streamWithCompressedData
+                        Assert.AreEqual(streamWithData.Length, streamWithCompressedData.Length, "Compressed stream must be same length as original data (too short to compress)");
+                        streamWithData.Position = 0;
+                        streamWithCompressedData.Position = 0;
+                        for (int i = 0; i < streamWithData.Length; i++)
+                        {
+                            Assert.AreEqual(streamWithData.ReadByte(), streamWithCompressedData.ReadByte(), "Content of decompressed stream is different");
+                        }
+
+                        //Assert streamWithData = streamWithUncompressedData
+                        Assert.AreEqual(streamWithData.Length, streamWithUncompressedData.Length, "Decompressed stream must be same length as original data");
+                        streamWithData.Position = 0;
+                        streamWithUncompressedData.Position = 0;
+                        for (int i = 0; i < streamWithData.Length; i++)
+                        {
+                            Assert.AreEqual(streamWithData.ReadByte(), streamWithUncompressedData.ReadByte(), "Content of decompressed stream is different");
+                        }
+                    }
+                }
+            }
+        }
+
 
         private void StreamCopyToStreamWithBufferSize(Stream p_Source, Stream p_Destination, int p_BufferSize)
         {

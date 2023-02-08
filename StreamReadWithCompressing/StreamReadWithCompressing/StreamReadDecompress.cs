@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -79,40 +80,80 @@ namespace StreamReadWithCompressing
 
             //Read new compressed chunk
             //Read first 4 bytes - may be known headerIdentification - it means that stream is compressed
+            LastReadUsedHeaderIdentification = null;
+
             byte[] intBytes = new byte[4];
             var headerIdentification = _StreamDataForReading.Read(intBytes, 0, intBytes.Length);
-            if (headerIdentification == 0) return 0;
+            _Position += headerIdentification;
+            if (headerIdentification == 0) return 0;    //nothing in input stream
             var module = _StreamReadModules.FindByHeaderIdentification(intBytes);
             if (module == null)
             {
                 //not compressed by known headerIdentification - only copy to output
-                LastReadUsedHeaderIdentification = null;
-                Array.Copy(intBytes, buffer, intBytes.Length);
-                int readedOriginal = _StreamDataForReading.Read(buffer, intBytes.Length, count - intBytes.Length) + intBytes.Length;
-                _Position += readedOriginal;
-                return readedOriginal;
+                return ReadToBufferOriginalInput(buffer, count, new List<Tuple<byte[], int>>()
+                {
+                    new Tuple<byte[], int>(intBytes, headerIdentification)
+                });
             }
-            LastReadUsedHeaderIdentification = Encoding.UTF8.GetString(intBytes);
 
             // Chunk header - Uncompressed and Compressed size
-            var readedUncompressedChunkSize = _StreamDataForReading.Read(intBytes, 0, intBytes.Length);
-            if (readedUncompressedChunkSize == 0) return 0;
-            var uncompressedChunkSize = BitConverter.ToInt32(intBytes, 0);
+            byte[] intBytes2 = new byte[4];
+            var readedUncompressedChunkSize = _StreamDataForReading.Read(intBytes2, 0, intBytes2.Length);
+            _Position += readedUncompressedChunkSize;
+            if (readedUncompressedChunkSize != 4)
+            {
+                return ReadToBufferOriginalInput(buffer, count, new List<Tuple<byte[], int>>()
+                {
+                    new Tuple<byte[], int>(intBytes, headerIdentification),
+                    new Tuple<byte[], int>(intBytes2, readedUncompressedChunkSize)
+                });
+            }
+            var uncompressedChunkSize = BitConverter.ToInt32(intBytes2, 0);
 
-            var readedCompressedChunkSize = _StreamDataForReading.Read(intBytes, 0, intBytes.Length);
-            if (readedCompressedChunkSize == 0) return 0;
-            var compressedChunkSize = BitConverter.ToInt32(intBytes, 0);
+            byte[] intBytes3 = new byte[4];
+            var readedCompressedChunkSize = _StreamDataForReading.Read(intBytes3, 0, intBytes3.Length);
+            _Position += readedCompressedChunkSize;
+            if (readedCompressedChunkSize != 4)
+            {
+                return ReadToBufferOriginalInput(buffer, count, new List<Tuple<byte[], int>>()
+                {
+                    new Tuple<byte[], int>(intBytes, headerIdentification),
+                    new Tuple<byte[], int>(intBytes2, readedUncompressedChunkSize),
+                    new Tuple<byte[], int>(intBytes3, readedCompressedChunkSize)
+                });
+            }
+            var compressedChunkSize = BitConverter.ToInt32(intBytes3, 0);
+
+            if (compressedChunkSize > _StreamDataForReading.Length)
+            {
+                return ReadToBufferOriginalInput(buffer, count, new List<Tuple<byte[], int>>()
+                {
+                    new Tuple<byte[], int>(intBytes, headerIdentification),
+                    new Tuple<byte[], int>(intBytes2, readedUncompressedChunkSize),
+                    new Tuple<byte[], int>(intBytes3, readedCompressedChunkSize)
+                });
+            }
 
             //Read Chunk data to _BufferCompressedData
             if (_BufferCompressedData.Length < compressedChunkSize)
                 Array.Resize(ref _BufferCompressedData, compressedChunkSize);
 
             int readed = _StreamDataForReading.ReadMaybeMoreTimes(_BufferCompressedData, 0, compressedChunkSize);
-            if (readed == 0) return 0;
+            if (readed == 0)
+            {
+                return ReadToBufferOriginalInput(buffer, count, new List<Tuple<byte[], int>>()
+                {
+                    new Tuple<byte[], int>(intBytes, headerIdentification),
+                    new Tuple<byte[], int>(intBytes2, readedUncompressedChunkSize),
+                    new Tuple<byte[], int>(intBytes3, readedCompressedChunkSize)
+                });
+            }
 
             _StreamCompressedData.Position = 0;
             _StreamCompressedData.Write(_BufferCompressedData, 0, readed);
             _StreamCompressedData.Position = 0;
+
+            LastReadUsedHeaderIdentification = module.HeaderIdentification;
 
             //unzip data to buffer
             using (var gzipStream = module.ActionCreateDecompressStreamForWriting(_StreamCompressedData))
@@ -137,6 +178,19 @@ namespace StreamReadWithCompressing
                 _Position += readedUncompressed;
                 return readedUncompressed;
             }
+        }
+
+        private int ReadToBufferOriginalInput(byte[] buffer, int count, List<Tuple<byte[],int>> prefixBytesReaded)
+        {
+            int byteArraysReaded = 0;
+            foreach (var prefixByte in prefixBytesReaded)
+            {
+                Array.Copy(prefixByte.Item1, 0, buffer, byteArraysReaded, prefixByte.Item2);
+                byteArraysReaded += prefixByte.Item2;
+            }
+            int readedOriginal = _StreamDataForReading.Read(buffer, byteArraysReaded, count - byteArraysReaded);
+            _Position += readedOriginal;
+            return readedOriginal + byteArraysReaded;
         }
 
         public override void Write(byte[] buffer, int offset, int count)

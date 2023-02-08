@@ -2,14 +2,14 @@
 <package >
   <metadata>
     <id>StreamReadWithCompressing</id>
-    <version>1.8.0</version>
+    <version>1.8.1</version>
     <authors>pbalas</authors>
     <owners>pbalas</owners>
     <licenseUrl>https://github.com/PajoCz/RuleEvaluator/licence.txt</licenseUrl>
     <projectUrl>https://github.com/PajoCz/StreamReadWithCompressing</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Stream compress/decompress on the fly with modules (GZip, Deflate)</description>
-    <copyright>Copyright 2017 pbalas</copyright>
+    <copyright>Copyright 2017-2023 pbalas</copyright>
     <tags>Stream Compress Decompress GZip Deflate</tags>
   </metadata>
 
