@@ -2,24 +2,28 @@
 <package >
   <metadata>
     <id>StreamReadWithCompressing</id>
-    <version>1.8.2</version>
+    <version>1.8.3</version>
     <authors>pbalas</authors>
     <owners>pbalas</owners>
     <licenseUrl>https://github.com/PajoCz/RuleEvaluator/licence.txt</licenseUrl>
     <projectUrl>https://github.com/PajoCz/StreamReadWithCompressing</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Stream compress/decompress on the fly with modules (GZip, Deflate)</description>
-    <copyright>Copyright 2017-2023 pbalas</copyright>
+    <copyright>Copyright 2017-2025 pbalas</copyright>
     <tags>Stream Compress Decompress GZip Deflate</tags>
     <dependencies>
-      <group targetFramework="net40">
+      <group targetFramework="net472">
         <dependency id="Brotli.NET" version="1.0.17" />
+      </group>
+	  <group targetFramework="net8.0">
       </group>
     </dependencies>
   </metadata>
 
   <files>
-    <file src="StreamReadWithCompressing\StreamReadWithCompressing\bin\Debug\StreamReadWithCompressing.dll" target="lib\net40"/>
-    <file src="StreamReadWithCompressing\StreamReadWithCompressing\bin\Debug\StreamReadWithCompressing.pdb" target="lib\net40"/>
+    <file src="StreamReadWithCompressing\StreamReadWithCompressing\bin\Debug\net472\StreamReadWithCompressing.dll" target="lib\net472"/>
+    <file src="StreamReadWithCompressing\StreamReadWithCompressing\bin\Debug\net472\StreamReadWithCompressing.pdb" target="lib\net472"/>
+    <file src="StreamReadWithCompressing\StreamReadWithCompressing\bin\Debug\net8.0\StreamReadWithCompressing.dll" target="lib\net8.0"/>
+    <file src="StreamReadWithCompressing\StreamReadWithCompressing\bin\Debug\net8.0\StreamReadWithCompressing.pdb" target="lib\net8.0"/>
   </files>
 </package>
