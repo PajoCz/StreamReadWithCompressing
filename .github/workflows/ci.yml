@@ -44,7 +44,7 @@ jobs:
           }
 
       - name: Build with MSBuild
-        run: msbuild ../StreamReadWithCompressing/StreamReadWithCompressing.sln /p:Configuration=Release /m
+        run: msbuild ./StreamReadWithCompressing/StreamReadWithCompressing.sln /p:Configuration=Release /m
 
       - name: Run tests (optional)
         # Uncomment and adjust if you have test projects targetable by dotnet test
